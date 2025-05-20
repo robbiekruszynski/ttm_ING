@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "mtg-lc",
-    "slug": "mtg-lc",
+    "slug": "ttging",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "mtglc",
     "userInterfaceStyle": "automatic",
@@ -37,6 +37,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a7cac98e-aae9-448c-ae71-3520c71d8d73"
+      }
+    },
+    "owner": "0xglitch"
   }
 }
