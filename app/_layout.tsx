@@ -61,6 +61,12 @@ const landscapeStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
+  playerBoxWide: {
+    width: '99%',
+  },
+  playerBoxTall: {
+    height: '98%',
+  },
   playerBoxReversed: {
     flexDirection: 'row-reverse',
   },
@@ -69,8 +75,6 @@ const landscapeStyles = StyleSheet.create({
   },
   playerContent: {
     flex: 1,
-    height: '100%',
-    padding: 10,
   },
   lifeTotalContainer: {
     width: 80,
@@ -157,7 +161,7 @@ const landscapeStyles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: 'bold',
-    marginBottom: 0,
+    marginBottom: 4,
     textAlign: 'center',
     opacity: 0.7,
   },
@@ -165,8 +169,14 @@ const landscapeStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     flexWrap: 'wrap',
-    gap: 2,
+    gap: 4,
     marginTop: 0,
+    paddingHorizontal: 2,
+  },
+  damageButtonWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   damageButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -191,6 +201,23 @@ const landscapeStyles = StyleSheet.create({
     marginTop: 0,
     opacity: 0.7,
   },
+  damageAdjustButton: {
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  damageAdjustButtonText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    opacity: 0.7,
+    lineHeight: 12,
+  },
   statsContainer: {
     flex: 1,
     padding: 20,
@@ -208,6 +235,7 @@ const landscapeStyles = StyleSheet.create({
     marginBottom: 10,
     paddingHorizontal: 10,
     gap: 8,
+    zIndex: 100,
   },
   playerNameContainer: {
     flexDirection: 'row',
@@ -224,6 +252,8 @@ const landscapeStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    position: 'relative',
+    zIndex: 1000,
   },
   diceButton: {
     width: 30,
@@ -234,10 +264,33 @@ const landscapeStyles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
+    position: 'relative',
+    zIndex: 1000,
   },
   diceButtonText: {
     fontSize: 16,
     color: '#fff',
+    opacity: 0.7,
+  },
+  combinedModeButton: {
+    width: 30,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 10,
+    padding: 2,
+    marginTop: 0,
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  combinedModeButtonActive: {
+    backgroundColor: 'rgba(255, 0, 0, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  combinedModeButtonText: {
+    color: '#fff',
+    fontSize: 8,
+    textAlign: 'center',
     opacity: 0.7,
   },
 });
@@ -258,6 +311,7 @@ export default function App() {
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [qrCodeVisible, setQrCodeVisible] = useState(false);
   const [showDiceModal, setShowDiceModal] = useState(false);
+  const [selectedDiceSides, setSelectedDiceSides] = useState(20);
   const [diceResult, setDiceResult] = useState<number | null>(null);
   const [showDiceSetup, setShowDiceSetup] = useState(false);
   const [diceResults, setDiceResults] = useState<{ [key: number]: number }>({});
@@ -268,6 +322,8 @@ export default function App() {
   const [modeSliders, setModeSliders] = useState<boolean[]>(Array(4).fill(false));
   const [regularLifeTotals, setRegularLifeTotals] = useState<number[]>(Array(4).fill(40));
   const [commanderLifeTotals, setCommanderLifeTotals] = useState<number[]>(Array(4).fill(21));
+  const [currentRollingPlayer, setCurrentRollingPlayer] = useState<number | null>(null);
+  const [combinedMode, setCombinedMode] = useState<boolean[]>(Array(4).fill(false));
 
   const initializePlayerStats = (count: number) => {
     return Array(count).fill(null).map(() => ({
@@ -357,39 +413,105 @@ export default function App() {
     isCommander ? setCommanderTotals(updated) : setLifeTotals(updated);
   };
 
-  const handleDamageClick = (currentPlayerIndex: number, sourceIndex: number, isCommander: boolean) => {
-    // When a player clicks a button, it only affects their own life total
-    const damageAmount = 1; // Amount of damage per click
-
-    // Update life totals - only affect the current player's life
-    if (isCommander) {
+  const adjustDamage = (currentPlayerIndex: number, sourceIndex: number, amount: number, isCommander: boolean) => {
+    const updatedStats = [...playerStats];
+    
+    if (combinedMode[currentPlayerIndex]) {
+      // In Duel mode, adjust both life totals and damage tracking
+      const newRegularTotals = [...regularLifeTotals];
       const newCommanderTotals = [...commanderLifeTotals];
-      newCommanderTotals[currentPlayerIndex] = Math.max(0, newCommanderTotals[currentPlayerIndex] - damageAmount);
+      
+      // Update regular damage and life
+      updatedStats[currentPlayerIndex].regularDamageTaken[sourceIndex] = 
+        Math.max(0, (updatedStats[currentPlayerIndex].regularDamageTaken[sourceIndex] || 0) + amount);
+      updatedStats[sourceIndex].regularDamageDealt[currentPlayerIndex] = 
+        Math.max(0, (updatedStats[sourceIndex].regularDamageDealt[currentPlayerIndex] || 0) + amount);
+      newRegularTotals[currentPlayerIndex] = Math.max(0, newRegularTotals[currentPlayerIndex] - amount);
+      
+      // Update commander damage and life
+      updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] = 
+        Math.max(0, (updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] || 0) + amount);
+      updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] = 
+        Math.max(0, (updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] || 0) + amount);
+      newCommanderTotals[currentPlayerIndex] = Math.max(0, newCommanderTotals[currentPlayerIndex] - amount);
+      
+      setRegularLifeTotals(newRegularTotals);
       setCommanderLifeTotals(newCommanderTotals);
     } else {
-      const newRegularTotals = [...regularLifeTotals];
-      newRegularTotals[currentPlayerIndex] = Math.max(0, newRegularTotals[currentPlayerIndex] - damageAmount);
-      setRegularLifeTotals(newRegularTotals);
+      // Normal mode - only adjust the selected life total and damage tracking
+      if (isCommander) {
+        updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] = 
+          Math.max(0, (updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] || 0) + amount);
+        updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] = 
+          Math.max(0, (updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] || 0) + amount);
+        
+        const newCommanderTotals = [...commanderLifeTotals];
+        newCommanderTotals[currentPlayerIndex] = Math.max(0, newCommanderTotals[currentPlayerIndex] - amount);
+        setCommanderLifeTotals(newCommanderTotals);
+      } else {
+        updatedStats[currentPlayerIndex].regularDamageTaken[sourceIndex] = 
+          Math.max(0, (updatedStats[currentPlayerIndex].regularDamageTaken[sourceIndex] || 0) + amount);
+        updatedStats[sourceIndex].regularDamageDealt[currentPlayerIndex] = 
+          Math.max(0, (updatedStats[sourceIndex].regularDamageDealt[currentPlayerIndex] || 0) + amount);
+        
+        const newRegularTotals = [...regularLifeTotals];
+        newRegularTotals[currentPlayerIndex] = Math.max(0, newRegularTotals[currentPlayerIndex] - amount);
+        setRegularLifeTotals(newRegularTotals);
+      }
     }
+    
+    setPlayerStats(updatedStats);
+  };
 
-    // Record damage dealt/taken
-    const updatedStats = [...playerStats];
-    if (isCommander) {
-      // Current player took damage
-      updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] = 
-        (updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] || 0) + damageAmount;
-      // Source player (button clicked) dealt damage
-      updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] = 
-        (updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] || 0) + damageAmount;
-    } else {
-      // Current player took damage
+  const handleDamageClick = (currentPlayerIndex: number, sourceIndex: number, isCommander: boolean) => {
+    const damageAmount = 1;
+
+    if (combinedMode[currentPlayerIndex]) {
+      // In Duel mode, damage affects both life totals
+      const newRegularTotals = [...regularLifeTotals];
+      const newCommanderTotals = [...commanderLifeTotals];
+      newRegularTotals[currentPlayerIndex] = Math.max(0, newRegularTotals[currentPlayerIndex] - damageAmount);
+      newCommanderTotals[currentPlayerIndex] = Math.max(0, newCommanderTotals[currentPlayerIndex] - damageAmount);
+      setRegularLifeTotals(newRegularTotals);
+      setCommanderLifeTotals(newCommanderTotals);
+
+      // Track damage in both regular and commander damage
+      const updatedStats = [...playerStats];
       updatedStats[currentPlayerIndex].regularDamageTaken[sourceIndex] = 
         (updatedStats[currentPlayerIndex].regularDamageTaken[sourceIndex] || 0) + damageAmount;
-      // Source player (button clicked) dealt damage
+      updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] = 
+        (updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] || 0) + damageAmount;
       updatedStats[sourceIndex].regularDamageDealt[currentPlayerIndex] = 
         (updatedStats[sourceIndex].regularDamageDealt[currentPlayerIndex] || 0) + damageAmount;
+      updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] = 
+        (updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] || 0) + damageAmount;
+      setPlayerStats(updatedStats);
+    } else {
+      // Normal mode - damage only affects the selected life total
+      if (isCommander) {
+        const newCommanderTotals = [...commanderLifeTotals];
+        newCommanderTotals[currentPlayerIndex] = Math.max(0, newCommanderTotals[currentPlayerIndex] - damageAmount);
+        setCommanderLifeTotals(newCommanderTotals);
+      } else {
+        const newRegularTotals = [...regularLifeTotals];
+        newRegularTotals[currentPlayerIndex] = Math.max(0, newRegularTotals[currentPlayerIndex] - damageAmount);
+        setRegularLifeTotals(newRegularTotals);
+      }
+
+      const updatedStats = [...playerStats];
+      if (isCommander) {
+        updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] = 
+          (updatedStats[currentPlayerIndex].commanderDamageTaken[sourceIndex] || 0) + damageAmount;
+        updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] = 
+          (updatedStats[sourceIndex].commanderDamageDealt[currentPlayerIndex] || 0) + damageAmount;
+      } else {
+        updatedStats[currentPlayerIndex].regularDamageTaken[sourceIndex] = 
+          (updatedStats[currentPlayerIndex].regularDamageTaken[sourceIndex] || 0) + damageAmount;
+        updatedStats[sourceIndex].regularDamageDealt[currentPlayerIndex] = 
+          (updatedStats[sourceIndex].regularDamageDealt[currentPlayerIndex] || 0) + damageAmount;
+      }
+      setPlayerStats(updatedStats);
     }
-    setPlayerStats(updatedStats);
   };
 
   const getTotalDamage = (playerIndex: number, type: 'dealt' | 'taken', damageType: 'regular' | 'commander') => {
@@ -407,7 +529,12 @@ export default function App() {
     setPlayerStats(updatedStats);
   };
 
-  // Function to generate game results data
+  const toggleCombinedMode = (index: number) => {
+    const newCombinedMode = [...combinedMode];
+    newCombinedMode[index] = !newCombinedMode[index];
+    setCombinedMode(newCombinedMode);
+  };
+
   const generateGameResults = () => {
     return JSON.stringify({
       players: playerStats.map((player, index) => ({
@@ -424,18 +551,17 @@ export default function App() {
     });
   };
 
-  // Function to share game results
   const shareGameResults = async () => {
     const results = generateGameResults();
     const gameData = JSON.parse(results);
     
-    // Create a formatted text message
     const message = `🎮 Magic: The Gathering Game Results 🎮\n\n` +
       gameData.players.map((player: any, index: number) => {
         const colors = Object.entries(player.colors)
           .filter(([_, selected]) => selected)
           .map(([color]) => color.charAt(0).toUpperCase() + color.slice(1))
           .join(', ');
+        
         
         const totalDamageDealt = Object.values(player.regularDamageDealt as Record<string, number>)
           .reduce((sum, damage) => sum + damage, 0);
@@ -461,10 +587,9 @@ export default function App() {
     }
   };
 
-  const rollDice = () => {
-    const result = Math.floor(Math.random() * 20) + 1; // D20 roll
+  const rollDice = (sides: number) => {
+    const result = Math.floor(Math.random() * sides) + 1;
     setDiceResult(result);
-    setShowDiceModal(true);
   };
 
   const renderDiceModal = () => (
@@ -474,27 +599,40 @@ export default function App() {
       animationType="fade"
       onRequestClose={() => setShowDiceModal(false)}
     >
-      <TouchableOpacity 
-        style={styles.diceModalOverlay}
-        activeOpacity={1}
-        onPress={() => setShowDiceModal(false)}
-      >
+      <View style={styles.diceModalOverlay}>
         <View style={styles.diceModalContent}>
-          <Text style={styles.dicePlayerText}>
-            {selectedPlayer !== null && (playerStats[selectedPlayer].info.nickname || `Player ${selectedPlayer + 1}`)}
-          </Text>
-          <Text style={styles.diceResultText}>{diceResult}</Text>
+          <Text style={styles.diceModalTitle}>Select Dice</Text>
+          <View style={styles.diceOptionsContainer}>
+            {[4, 6, 8, 10, 12, 20, 100].map((sides) => (
+              <TouchableOpacity
+                key={sides}
+                style={[
+                  styles.diceOption,
+                  selectedDiceSides === sides && styles.diceOptionSelected
+                ]}
+                onPress={() => {
+                  setSelectedDiceSides(sides);
+                  rollDice(sides);
+                }}
+              >
+                <Text style={styles.diceOptionText}>d{sides}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {diceResult !== null && (
+            <Text style={styles.diceResultText}>{diceResult}</Text>
+          )}
           <TouchableOpacity
-            style={styles.diceRollAgainButton}
+            style={styles.closeButton}
             onPress={() => {
               setShowDiceModal(false);
-              setTimeout(rollDice, 100);
+              setDiceResult(null);
             }}
           >
-            <Text style={styles.diceRollAgainText}>Roll Again</Text>
+            <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 
@@ -585,88 +723,128 @@ export default function App() {
         style={styles.gradient}
       >
         <View style={[styles.playersContainer, landscapeStyles.container]}>
-          {Array(playerCount).fill(null).map((_, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.playerBox,
-                landscapeStyles.playerBox,
-                (index === 1 || index === 3) && landscapeStyles.playerBoxReversed,
-                (index === 0 || index === 1) && landscapeStyles.playerBoxFlipped,
-                modeSliders[index] && { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
-              ]}
-            >
-              <View style={[styles.playerContent, landscapeStyles.playerContent]}>
-                <View style={landscapeStyles.playerHeader}>
-                  <TouchableOpacity
-                    style={landscapeStyles.playerNameContainer}
-                    onPress={() => setEditingPlayer(index)}
-                  >
-                    <Text style={landscapeStyles.playerTitle}>
-                      {playerStats[index].info.nickname || `Player ${index + 1}`}
-                    </Text>
-                    {renderPlayerColors(playerStats[index].info.colors)}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={landscapeStyles.modeSwitch}
-                    onPress={() => toggleMode(index)}
-                  >
-                    <View style={landscapeStyles.modeSwitchTrack}>
-                      <View style={[
-                        landscapeStyles.modeSwitchThumb,
-                        { marginLeft: modeSliders[index] ? 'auto' : 0 }
-                      ]} />
+          {Array(playerCount).fill(null).map((_, index) => {
+            const isWideBox = playerCount === 3 && index === 2;
+            const isTallBox = playerCount <= 2;
+
+            return (
+              <View 
+                key={index} 
+                style={[
+                  styles.playerBox,
+                  landscapeStyles.playerBox,
+                  isWideBox && landscapeStyles.playerBoxWide,
+                  isTallBox && landscapeStyles.playerBoxTall,
+                  (index === 1 || index === 3) && landscapeStyles.playerBoxReversed,
+                  (index === 0 || index === 1) && landscapeStyles.playerBoxFlipped,
+                  modeSliders[index] && { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
+                ]}
+              >
+                <View style={[styles.playerContent, landscapeStyles.playerContent]}>
+                  <View style={landscapeStyles.playerHeader}>
+                    <TouchableOpacity
+                      style={landscapeStyles.playerNameContainer}
+                      onPress={() => setEditingPlayer(index)}
+                    >
+                      <Text style={landscapeStyles.playerTitle}>
+                        {playerStats[index].info.nickname || `Player ${index + 1}`}
+                      </Text>
+                      {renderPlayerColors(playerStats[index].info.colors)}
+                    </TouchableOpacity>
+                    <View style={landscapeStyles.headerControls}>
+                      <TouchableOpacity
+                        style={landscapeStyles.modeSwitch}
+                        onPress={() => toggleMode(index)}
+                      >
+                        <View style={landscapeStyles.modeSwitchTrack}>
+                          <View style={[
+                            landscapeStyles.modeSwitchThumb,
+                            { marginLeft: modeSliders[index] ? 'auto' : 0 }
+                          ]} />
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          landscapeStyles.combinedModeButton,
+                          combinedMode[index] && landscapeStyles.combinedModeButtonActive
+                        ]}
+                        onPress={() => toggleCombinedMode(index)}
+                      >
+                        <Text style={landscapeStyles.combinedModeButtonText}>Duel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={landscapeStyles.diceButton}
+                        onPress={() => {
+                          setCurrentRollingPlayer(index);
+                          setShowDiceModal(true);
+                        }}
+                      >
+                        <Text style={landscapeStyles.diceButtonText}>🎲</Text>
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
-                </View>
+                  </View>
 
-                <View style={landscapeStyles.healthControls}>
-                  <TouchableOpacity
-                    style={landscapeStyles.healthButton}
-                    onPress={() => adjustHealth(index, -1, modeSliders[index])}
-                  >
-                    <Text style={landscapeStyles.healthButtonText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={landscapeStyles.healthValue}>
-                    {modeSliders[index] ? commanderLifeTotals[index] : regularLifeTotals[index]}
-                  </Text>
-                  <TouchableOpacity
-                    style={landscapeStyles.healthButton}
-                    onPress={() => adjustHealth(index, 1, modeSliders[index])}
-                  >
-                    <Text style={landscapeStyles.healthButtonText}>+</Text>
-                  </TouchableOpacity>
-                </View>
+                  <View style={landscapeStyles.healthControls}>
+                    <TouchableOpacity
+                      style={landscapeStyles.healthButton}
+                      onPress={() => adjustHealth(index, -1, modeSliders[index])}
+                    >
+                      <Text style={landscapeStyles.healthButtonText}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={landscapeStyles.healthValue}>
+                      {modeSliders[index] ? commanderLifeTotals[index] : regularLifeTotals[index]}
+                    </Text>
+                    <TouchableOpacity
+                      style={landscapeStyles.healthButton}
+                      onPress={() => adjustHealth(index, 1, modeSliders[index])}
+                    >
+                      <Text style={landscapeStyles.healthButtonText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
 
-                <View style={landscapeStyles.damageSection}>
-                  <Text style={landscapeStyles.damageSectionTitle}>Damage From:</Text>
-                  <View style={landscapeStyles.damageButtonsContainer}>
-                    {Array(4).fill(null).map((_, sourceIndex) => (
-                      sourceIndex !== index && (
-                        <TouchableOpacity
-                          key={sourceIndex}
-                          style={landscapeStyles.damageButton}
-                          onPress={() => handleDamageClick(index, sourceIndex, modeSliders[index])}
-                        >
-                          <Text style={landscapeStyles.damageButtonText}>
-                            {playerStats[sourceIndex].info.nickname || `Player ${sourceIndex + 1}`}
-                          </Text>
-                          <Text style={[
-                            landscapeStyles.damageAmount,
-                            { color: modeSliders[index] ? '#ff6b6b' : '#fff' }
-                          ]}>
-                            {modeSliders[index] 
-                              ? playerStats[index]?.commanderDamageTaken[sourceIndex] || 0
-                              : playerStats[index]?.regularDamageTaken[sourceIndex] || 0}
-                          </Text>
-                        </TouchableOpacity>
-                      )
-                    ))}
+                  <View style={landscapeStyles.damageSection}>
+                    <Text style={landscapeStyles.damageSectionTitle}>Damage From:</Text>
+                    <View style={landscapeStyles.damageButtonsContainer}>
+                      {Array(playerCount).fill(null).map((_, sourceIndex) => (
+                        sourceIndex !== index && (
+                          <View key={sourceIndex} style={landscapeStyles.damageButtonWrapper}>
+                            <TouchableOpacity
+                              style={landscapeStyles.damageAdjustButton}
+                              onPress={() => adjustDamage(index, sourceIndex, -1, modeSliders[index])}
+                            >
+                              <Text style={landscapeStyles.damageAdjustButtonText}>-</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={landscapeStyles.damageButton}
+                              onPress={() => handleDamageClick(index, sourceIndex, modeSliders[index])}
+                            >
+                              <Text style={landscapeStyles.damageButtonText}>
+                                {playerStats[sourceIndex].info.nickname || `P${sourceIndex + 1}`}
+                              </Text>
+                              <Text style={[
+                                landscapeStyles.damageAmount,
+                                { color: modeSliders[index] ? '#ff6b6b' : '#fff' }
+                              ]}>
+                                {modeSliders[index] 
+                                  ? playerStats[index]?.commanderDamageTaken[sourceIndex] || 0
+                                  : playerStats[index]?.regularDamageTaken[sourceIndex] || 0}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={landscapeStyles.damageAdjustButton}
+                              onPress={() => adjustDamage(index, sourceIndex, 1, modeSliders[index])}
+                            >
+                              <Text style={landscapeStyles.damageAdjustButtonText}>+</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )
+                      ))}
+                    </View>
                   </View>
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
         <View style={[styles.endGameButtonContainer, styles.endGameButtonContainerLandscape]}>
           <TouchableOpacity
@@ -687,14 +865,23 @@ export default function App() {
   };
 
   const adjustHealth = (index: number, amount: number, isCommander: boolean) => {
-    if (isCommander) {
-      const newTotals = [...commanderLifeTotals];
-      newTotals[index] = Math.max(0, newTotals[index] + amount);
-      setCommanderLifeTotals(newTotals);
+    if (combinedMode[index]) {
+      const newRegularTotals = [...regularLifeTotals];
+      const newCommanderTotals = [...commanderLifeTotals];
+      newRegularTotals[index] = Math.max(0, newRegularTotals[index] + amount);
+      newCommanderTotals[index] = Math.max(0, newCommanderTotals[index] + amount);
+      setRegularLifeTotals(newRegularTotals);
+      setCommanderLifeTotals(newCommanderTotals);
     } else {
-      const newTotals = [...regularLifeTotals];
-      newTotals[index] = Math.max(0, newTotals[index] + amount);
-      setRegularLifeTotals(newTotals);
+      if (isCommander) {
+        const newTotals = [...commanderLifeTotals];
+        newTotals[index] = Math.max(0, newTotals[index] + amount);
+        setCommanderLifeTotals(newTotals);
+      } else {
+        const newTotals = [...regularLifeTotals];
+        newTotals[index] = Math.max(0, newTotals[index] + amount);
+        setRegularLifeTotals(newTotals);
+      }
     }
   };
 
@@ -778,9 +965,6 @@ export default function App() {
                 <TouchableOpacity style={styles.startButton} onPress={startGame}>
                   <Text style={styles.startButtonText}>Start Game</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.startButton} onPress={startDiceRoll}>
-                  <Text style={styles.startButtonText}>Dice Roll</Text>
-                </TouchableOpacity>
               </View>
             </View>
           </LinearGradient>
@@ -799,7 +983,6 @@ export default function App() {
           <View style={[styles.statsContainer, isLandscape && landscapeStyles.statsContainer]}>
             <Text style={styles.statsTitle}>Game Summary</Text>
             
-            {/* Share and QR Code Buttons */}
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 style={styles.actionButton}
@@ -815,7 +998,6 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* QR Code Modal */}
             {qrCodeVisible && (
               <View style={styles.qrCodeContainer}>
                 <QRCode
@@ -833,7 +1015,6 @@ export default function App() {
               </View>
             )}
 
-            {/* Damage Type Toggle */}
             <View style={styles.statsToggleContainer}>
               <TouchableOpacity
                 style={[styles.statsToggleButton, selectedTab === 'regular' && styles.statsToggleActive]}
@@ -849,7 +1030,6 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* Overall Game Chart */}
             <View style={styles.chartContainer}>
               <Text style={styles.chartTitle}>Total Damage Dealt</Text>
               <PieChart
@@ -879,7 +1059,6 @@ export default function App() {
               />
             </View>
 
-            {/* Player Selection Tabs */}
             <ScrollView 
               horizontal 
               style={styles.playerTabsScroll}
@@ -901,7 +1080,6 @@ export default function App() {
               ))}
             </ScrollView>
 
-            {/* Selected Player Stats */}
             {selectedPlayer !== null && (
               <ScrollView style={styles.playerStatsScroll}>
                 <View style={styles.playerStatsHeader}>
@@ -976,7 +1154,6 @@ export default function App() {
     );
   }
 
-  // If in portrait mode, show the background image
   if (!isLandscape) {
     return (
       <View style={styles.setupContainer}>
@@ -998,7 +1175,6 @@ export default function App() {
     );
   }
 
-  // Only render the game in landscape mode
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -1006,88 +1182,128 @@ export default function App() {
         style={styles.gradient}
       >
         <View style={[styles.playersContainer, landscapeStyles.container]}>
-          {Array(4).fill(null).map((_, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.playerBox,
-                landscapeStyles.playerBox,
-                (index === 1 || index === 3) && landscapeStyles.playerBoxReversed,
-                (index === 0 || index === 1) && landscapeStyles.playerBoxFlipped,
-                modeSliders[index] && { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
-              ]}
-            >
-              <View style={[styles.playerContent, landscapeStyles.playerContent]}>
-                <View style={landscapeStyles.playerHeader}>
-                  <TouchableOpacity
-                    style={landscapeStyles.playerNameContainer}
-                    onPress={() => setEditingPlayer(index)}
-                  >
-                    <Text style={landscapeStyles.playerTitle}>
-                      {playerStats[index].info.nickname || `Player ${index + 1}`}
-                    </Text>
-                    {renderPlayerColors(playerStats[index].info.colors)}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={landscapeStyles.modeSwitch}
-                    onPress={() => toggleMode(index)}
-                  >
-                    <View style={landscapeStyles.modeSwitchTrack}>
-                      <View style={[
-                        landscapeStyles.modeSwitchThumb,
-                        { marginLeft: modeSliders[index] ? 'auto' : 0 }
-                      ]} />
+          {Array(playerCount).fill(null).map((_, index) => {
+            const isWideBox = playerCount === 3 && index === 2;
+            const isTallBox = playerCount <= 2;
+
+            return (
+              <View 
+                key={index} 
+                style={[
+                  styles.playerBox,
+                  landscapeStyles.playerBox,
+                  isWideBox && landscapeStyles.playerBoxWide,
+                  isTallBox && landscapeStyles.playerBoxTall,
+                  (index === 1 || index === 3) && landscapeStyles.playerBoxReversed,
+                  (index === 0 || index === 1) && landscapeStyles.playerBoxFlipped,
+                  modeSliders[index] && { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
+                ]}
+              >
+                <View style={[styles.playerContent, landscapeStyles.playerContent]}>
+                  <View style={landscapeStyles.playerHeader}>
+                    <TouchableOpacity
+                      style={landscapeStyles.playerNameContainer}
+                      onPress={() => setEditingPlayer(index)}
+                    >
+                      <Text style={landscapeStyles.playerTitle}>
+                        {playerStats[index].info.nickname || `Player ${index + 1}`}
+                      </Text>
+                      {renderPlayerColors(playerStats[index].info.colors)}
+                    </TouchableOpacity>
+                    <View style={landscapeStyles.headerControls}>
+                      <TouchableOpacity
+                        style={landscapeStyles.modeSwitch}
+                        onPress={() => toggleMode(index)}
+                      >
+                        <View style={landscapeStyles.modeSwitchTrack}>
+                          <View style={[
+                            landscapeStyles.modeSwitchThumb,
+                            { marginLeft: modeSliders[index] ? 'auto' : 0 }
+                          ]} />
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          landscapeStyles.combinedModeButton,
+                          combinedMode[index] && landscapeStyles.combinedModeButtonActive
+                        ]}
+                        onPress={() => toggleCombinedMode(index)}
+                      >
+                        <Text style={landscapeStyles.combinedModeButtonText}>Duel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={landscapeStyles.diceButton}
+                        onPress={() => {
+                          setCurrentRollingPlayer(index);
+                          setShowDiceModal(true);
+                        }}
+                      >
+                        <Text style={landscapeStyles.diceButtonText}>🎲</Text>
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
-                </View>
+                  </View>
 
-                <View style={landscapeStyles.healthControls}>
-                  <TouchableOpacity
-                    style={landscapeStyles.healthButton}
-                    onPress={() => adjustHealth(index, -1, modeSliders[index])}
-                  >
-                    <Text style={landscapeStyles.healthButtonText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={landscapeStyles.healthValue}>
-                    {modeSliders[index] ? commanderLifeTotals[index] : regularLifeTotals[index]}
-                  </Text>
-                  <TouchableOpacity
-                    style={landscapeStyles.healthButton}
-                    onPress={() => adjustHealth(index, 1, modeSliders[index])}
-                  >
-                    <Text style={landscapeStyles.healthButtonText}>+</Text>
-                  </TouchableOpacity>
-                </View>
+                  <View style={landscapeStyles.healthControls}>
+                    <TouchableOpacity
+                      style={landscapeStyles.healthButton}
+                      onPress={() => adjustHealth(index, -1, modeSliders[index])}
+                    >
+                      <Text style={landscapeStyles.healthButtonText}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={landscapeStyles.healthValue}>
+                      {modeSliders[index] ? commanderLifeTotals[index] : regularLifeTotals[index]}
+                    </Text>
+                    <TouchableOpacity
+                      style={landscapeStyles.healthButton}
+                      onPress={() => adjustHealth(index, 1, modeSliders[index])}
+                    >
+                      <Text style={landscapeStyles.healthButtonText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
 
-                <View style={landscapeStyles.damageSection}>
-                  <Text style={landscapeStyles.damageSectionTitle}>Damage From:</Text>
-                  <View style={landscapeStyles.damageButtonsContainer}>
-                    {Array(4).fill(null).map((_, sourceIndex) => (
-                      sourceIndex !== index && (
-                        <TouchableOpacity
-                          key={sourceIndex}
-                          style={landscapeStyles.damageButton}
-                          onPress={() => handleDamageClick(index, sourceIndex, modeSliders[index])}
-                        >
-                          <Text style={landscapeStyles.damageButtonText}>
-                            {playerStats[sourceIndex].info.nickname || `Player ${sourceIndex + 1}`}
-                          </Text>
-                          <Text style={[
-                            landscapeStyles.damageAmount,
-                            { color: modeSliders[index] ? '#ff6b6b' : '#fff' }
-                          ]}>
-                            {modeSliders[index] 
-                              ? playerStats[index]?.commanderDamageTaken[sourceIndex] || 0
-                              : playerStats[index]?.regularDamageTaken[sourceIndex] || 0}
-                          </Text>
-                        </TouchableOpacity>
-                      )
-                    ))}
+                  <View style={landscapeStyles.damageSection}>
+                    <Text style={landscapeStyles.damageSectionTitle}>Damage From:</Text>
+                    <View style={landscapeStyles.damageButtonsContainer}>
+                      {Array(playerCount).fill(null).map((_, sourceIndex) => (
+                        sourceIndex !== index && (
+                          <View key={sourceIndex} style={landscapeStyles.damageButtonWrapper}>
+                            <TouchableOpacity
+                              style={landscapeStyles.damageAdjustButton}
+                              onPress={() => adjustDamage(index, sourceIndex, -1, modeSliders[index])}
+                            >
+                              <Text style={landscapeStyles.damageAdjustButtonText}>-</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={landscapeStyles.damageButton}
+                              onPress={() => handleDamageClick(index, sourceIndex, modeSliders[index])}
+                            >
+                              <Text style={landscapeStyles.damageButtonText}>
+                                {playerStats[sourceIndex].info.nickname || `P${sourceIndex + 1}`}
+                              </Text>
+                              <Text style={[
+                                landscapeStyles.damageAmount,
+                                { color: modeSliders[index] ? '#ff6b6b' : '#fff' }
+                              ]}>
+                                {modeSliders[index] 
+                                  ? playerStats[index]?.commanderDamageTaken[sourceIndex] || 0
+                                  : playerStats[index]?.regularDamageTaken[sourceIndex] || 0}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={landscapeStyles.damageAdjustButton}
+                              onPress={() => adjustDamage(index, sourceIndex, 1, modeSliders[index])}
+                            >
+                              <Text style={landscapeStyles.damageAdjustButtonText}>+</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )
+                      ))}
+                    </View>
                   </View>
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
         <View style={[styles.endGameButtonContainer, styles.endGameButtonContainerLandscape]}>
           <TouchableOpacity
@@ -1285,146 +1501,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     flexWrap: 'wrap',
-    gap: 5,
-    marginTop: 2,
+    gap: 4,
+    marginTop: 0,
+    paddingHorizontal: 2,
+  },
+  damageButtonWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   damageButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    padding: 8,
-    minWidth: 70,
+    borderRadius: 6,
+    padding: 4,
+    minWidth: 60,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   damageButtonText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
     textAlign: 'center',
     opacity: 0.7,
   },
   damageAmount: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginTop: 2,
+    marginTop: 0,
     opacity: 0.7,
   },
-  editPlayerContainer: {
-    padding: 20,
+  damageAdjustButton: {
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  editPlayerTitle: {
-    fontSize: 24,
-    color: '#fff',
-    marginBottom: 20,
-  },
-  nicknameInput: {
-    width: '100%',
-    maxWidth: 300,
-    height: 50,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    padding: 10,
-    color: '#fff',
-    marginBottom: 20,
+    borderRadius: 7,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  colorSelectorLabel: {
+  damageAdjustButtonText: {
     color: '#fff',
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  colorSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 20,
-  },
-  colorButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  colorButtonSelected: {
-    borderColor: '#fff',
-    borderWidth: 3,
-  },
-  saveButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: 'bold',
-  },
-  playerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    gap: 8,
-  },
-  playerColorIndicators: {
-    flexDirection: 'row',
-    marginLeft: 10,
-    gap: 4,
-  },
-  colorIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  endGameButtonContainer: {
-    width: '100%',
-    padding: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  endGameButtonContainerLandscape: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -30 }, { translateY: -10 }],
-    backgroundColor: 'transparent',
-    zIndex: 1000,
-    pointerEvents: 'box-none',
-  },
-  endGameButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    margin: 0,
-    width: 60,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    pointerEvents: 'auto',
-  },
-  endGameButtonText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    opacity: 0.7,
+    lineHeight: 12,
   },
   statsContainer: {
     flex: 1,
@@ -1617,63 +1741,65 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
   },
   diceModalContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(26, 42, 108, 0.95)',
     padding: 20,
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+    width: '80%',
+    maxWidth: 400,
+    zIndex: 1001,
+  },
+  diceModalTitle: {
+    fontSize: 24,
+    color: '#fff',
+    marginBottom: 20,
+    fontWeight: 'bold',
+  },
+  diceOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 20,
+  },
+  diceOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  diceOptionSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#fff',
+  },
+  diceOptionText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  rollButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    marginBottom: 20,
+  },
+  rollButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   diceResultText: {
     fontSize: 72,
     color: '#fff',
     fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  diceRollAgainButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 5,
-  },
-  diceRollAgainText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  diceContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-  },
-  diceResultDisplay: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    width: 120,
-    height: 120,
-  },
-  diceRollButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    minWidth: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  diceRollButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  playerContent: {
-    flex: 1,
+    marginVertical: 20,
   },
   portraitMessage: {
     fontSize: 24,
@@ -1683,10 +1809,114 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     paddingHorizontal: 20,
   },
-  dicePlayerText: {
-    fontSize: 18,
+  playerContent: {
+    flex: 1,
+  },
+  editPlayerContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  editPlayerTitle: {
+    fontSize: 24,
     color: '#fff',
+    marginBottom: 20,
+  },
+  nicknameInput: {
+    width: '100%',
+    maxWidth: 300,
+    height: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 10,
+    color: '#fff',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  colorSelectorLabel: {
+    color: '#fff',
+    fontSize: 16,
     marginBottom: 10,
+  },
+  colorSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 20,
+  },
+  colorButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  colorButtonSelected: {
+    borderColor: '#fff',
+    borderWidth: 3,
+  },
+  saveButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  playerColorIndicators: {
+    flexDirection: 'row',
+    marginLeft: 10,
+    gap: 4,
+  },
+  colorIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  endGameButtonContainer: {
+    width: '100%',
+    padding: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  endGameButtonContainerLandscape: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -30 }, { translateY: -10 }],
+    backgroundColor: 'transparent',
+    zIndex: 1000,
+    pointerEvents: 'box-none',
+  },
+  endGameButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    margin: 0,
+    width: 60,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'auto',
+  },
+  endGameButtonText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: 'bold',
     textAlign: 'center',
   },
 });
@@ -1694,3 +1924,4 @@ const styles = StyleSheet.create({
 
 
 
+  
