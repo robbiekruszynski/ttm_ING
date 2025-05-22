@@ -55,7 +55,7 @@ const landscapeStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     position: 'relative',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(13, 17, 38, 0.85)',
     borderRadius: 6,
     padding: 4,
     borderWidth: 1,
@@ -604,7 +604,7 @@ export default function App() {
           resizeMode="cover"
         >
           <LinearGradient
-            colors={['rgba(26, 42, 108, 0.7)', 'rgba(45, 45, 77, 0.8)', 'rgba(15, 15, 31, 0.9)']}
+            colors={['rgba(23, 27, 48, 0.95)', 'rgba(33, 37, 58, 0.9)', 'rgba(43, 47, 68, 0.85)']}
             style={styles.gradient}
           >
             <ScrollView 
@@ -689,33 +689,39 @@ export default function App() {
   if (editingPlayer !== null) {
     return (
       <View style={styles.container}>
-        <LinearGradient
-          colors={['#1a2a6c', '#2d2d4d', '#0f0f1f']}
-          style={styles.gradient}
+        <ImageBackground
+          source={require('../assets/images/background_img.png')}
+          style={styles.backgroundImage}
+          resizeMode="cover"
         >
-          <View style={styles.editPlayerContainer}>
-            <Text style={styles.editPlayerTitle}>Edit Player {editingPlayer + 1}</Text>
-            <TextInput
-              style={styles.nicknameInput}
-              placeholder="Enter nickname"
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              value={playerStats[editingPlayer].info.nickname}
-              onChangeText={(text) => {
-                const updatedStats = [...playerStats];
-                updatedStats[editingPlayer].info.nickname = text;
-                setPlayerStats(updatedStats);
-              }}
-            />
-            <Text style={styles.colorSelectorLabel}>Select Colors:</Text>
-            {renderColorSelector(editingPlayer, playerStats[editingPlayer].info.colors)}
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={() => setEditingPlayer(null)}
-            >
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+          <LinearGradient
+            colors={['rgba(23, 27, 48, 0.95)', 'rgba(33, 37, 58, 0.9)', 'rgba(43, 47, 68, 0.85)']}
+            style={styles.gradient}
+          >
+            <View style={styles.editPlayerContainer}>
+              <Text style={styles.editPlayerTitle}>Edit Player {editingPlayer + 1}</Text>
+              <TextInput
+                style={styles.nicknameInput}
+                placeholder="Enter nickname"
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                value={playerStats[editingPlayer].info.nickname}
+                onChangeText={(text) => {
+                  const updatedStats = [...playerStats];
+                  updatedStats[editingPlayer].info.nickname = text;
+                  setPlayerStats(updatedStats);
+                }}
+              />
+              <Text style={styles.colorSelectorLabel}>Select Colors:</Text>
+              {renderColorSelector(editingPlayer, playerStats[editingPlayer].info.colors)}
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={() => setEditingPlayer(null)}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </ImageBackground>
       </View>
     );
   }
@@ -733,7 +739,7 @@ export default function App() {
           resizeMode="cover"
         >
           <LinearGradient
-            colors={['rgba(26, 42, 108, 0.7)', 'rgba(45, 45, 77, 0.8)', 'rgba(15, 15, 31, 0.9)']}
+            colors={['rgba(23, 27, 48, 0.95)', 'rgba(33, 37, 58, 0.9)', 'rgba(43, 47, 68, 0.85)']}
             style={styles.gradient}
           >
             <View style={styles.setupContent}>
@@ -774,7 +780,7 @@ export default function App() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#1a2a6c', '#2d2d4d', '#0f0f1f']}
+          colors={['rgba(33, 37, 58, 0.95)', 'rgba(43, 47, 68, 0.9)', 'rgba(53, 57, 78, 0.85)']}
           style={styles.gradient}
         >
           <View style={[styles.statsContainer, isLandscape && landscapeStyles.statsContainer]}>
@@ -959,7 +965,7 @@ export default function App() {
           resizeMode="cover"
         >
           <LinearGradient
-            colors={['rgba(26, 42, 108, 0.7)', 'rgba(45, 45, 77, 0.8)', 'rgba(15, 15, 31, 0.9)']}
+            colors={['rgba(23, 27, 48, 0.95)', 'rgba(33, 37, 58, 0.9)', 'rgba(43, 47, 68, 0.85)']}
             style={styles.gradient}
           >
             <View style={styles.setupContent}>
@@ -974,7 +980,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#1a2a6c', '#2d2d4d', '#0f0f1f']}
+        colors={['rgba(33, 37, 58, 0.95)', 'rgba(43, 47, 68, 0.9)', 'rgba(53, 57, 78, 0.85)']}
         style={styles.gradient}
       >
         <View style={[styles.playersContainer, landscapeStyles.container]}>
@@ -1079,7 +1085,7 @@ export default function App() {
                               </Text>
                               <Text style={[
                                 landscapeStyles.damageAmount,
-                                { color: modeSliders[index] ? '#ff6b6b' : '#fff' }
+                                { color: modeSliders[index] ? 'rgba(255, 0, 0, 0.8)' : '#fff' }
                               ]}>
                                 {modeSliders[index] 
                                   ? playerStats[index]?.commanderDamageTaken[sourceIndex] || 0
@@ -1211,13 +1217,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playerBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: '49.5%',
+    height: '49%',
+    marginVertical: 1,
+    overflow: 'visible',
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: 'rgba(13, 17, 38, 0.85)',
     borderRadius: 6,
     padding: 4,
-    marginBottom: 4,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    width: '100%',
   },
   playerBoxLandscape: {
     width: '48%',
