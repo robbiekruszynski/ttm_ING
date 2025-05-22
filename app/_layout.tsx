@@ -1,7 +1,7 @@
 import { Picker } from '@react-native-picker/picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Animated, ImageBackground, Modal, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ImageBackground, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -136,6 +136,7 @@ const landscapeStyles = StyleSheet.create({
     padding: 2,
     marginTop: 0,
     alignSelf: 'center',
+    marginRight: 8,
   },
   modeSwitchTrack: {
     flex: 1,
@@ -251,7 +252,7 @@ const landscapeStyles = StyleSheet.create({
   headerControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 16,
     position: 'relative',
     zIndex: 1000,
   },
@@ -282,6 +283,7 @@ const landscapeStyles = StyleSheet.create({
     alignSelf: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
+    marginRight: 8,
   },
   combinedModeButtonActive: {
     backgroundColor: 'rgba(255, 0, 0, 0.2)',
@@ -310,20 +312,14 @@ export default function App() {
   const [editingPlayer, setEditingPlayer] = useState<number | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [qrCodeVisible, setQrCodeVisible] = useState(false);
-  const [showDiceModal, setShowDiceModal] = useState(false);
-  const [selectedDiceSides, setSelectedDiceSides] = useState(20);
+  const [showDiceInterface, setShowDiceInterface] = useState(false);
   const [diceResult, setDiceResult] = useState<number | null>(null);
-  const [showDiceSetup, setShowDiceSetup] = useState(false);
-  const [diceResults, setDiceResults] = useState<{ [key: number]: number }>({});
-  const [showDiceResults, setShowDiceResults] = useState(false);
-  const [rollingAnimations] = useState(() => 
-    Array(8).fill(null).map(() => new Animated.Value(0))
-  );
+  const [currentRollingPlayer, setCurrentRollingPlayer] = useState<number | null>(null);
   const [modeSliders, setModeSliders] = useState<boolean[]>(Array(4).fill(false));
   const [regularLifeTotals, setRegularLifeTotals] = useState<number[]>(Array(4).fill(40));
   const [commanderLifeTotals, setCommanderLifeTotals] = useState<number[]>(Array(4).fill(21));
-  const [currentRollingPlayer, setCurrentRollingPlayer] = useState<number | null>(null);
   const [combinedMode, setCombinedMode] = useState<boolean[]>(Array(4).fill(false));
+  const [selectedDiceSides, setSelectedDiceSides] = useState(20);
 
   const initializePlayerStats = (count: number) => {
     return Array(count).fill(null).map(() => ({
@@ -592,271 +588,76 @@ export default function App() {
     setDiceResult(result);
   };
 
-  const renderDiceModal = () => (
-    <Modal
-      transparent={true}
-      visible={showDiceModal}
-      animationType="fade"
-      onRequestClose={() => setShowDiceModal(false)}
-    >
-      <View style={styles.diceModalOverlay}>
-        <View style={styles.diceModalContent}>
-          <Text style={styles.diceModalTitle}>Select Dice</Text>
-          <View style={styles.diceOptionsContainer}>
-            {[4, 6, 8, 10, 12, 20, 100].map((sides) => (
-              <TouchableOpacity
-                key={sides}
-                style={[
-                  styles.diceOption,
-                  selectedDiceSides === sides && styles.diceOptionSelected
-                ]}
-                onPress={() => {
-                  setSelectedDiceSides(sides);
-                  rollDice(sides);
-                }}
-              >
-                <Text style={styles.diceOptionText}>d{sides}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {diceResult !== null && (
-            <Text style={styles.diceResultText}>{diceResult}</Text>
-          )}
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => {
-              setShowDiceModal(false);
-              setDiceResult(null);
-            }}
-          >
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const startDiceRoll = () => {
-    setShowDiceSetup(true);
+  const handleDicePress = (index: number) => {
+    setCurrentRollingPlayer(index);
+    setShowDiceInterface(true);
   };
 
-  const startDiceGame = (count: number) => {
-    setPlayerCount(count);
-    setShowDiceSetup(false);
-    setShowDiceResults(true);
-    setDiceResults({});
-  };
+  const renderDiceInterface = () => {
+    if (!showDiceInterface) return null;
 
-  const animateDiceRoll = (index: number) => {
-    rollingAnimations[index].setValue(0);
-    Animated.sequence([
-      Animated.timing(rollingAnimations[index], {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(rollingAnimations[index], {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      })
-    ]).start();
-  };
-
-  const rollDiceForPlayer = (playerIndex: number) => {
-    animateDiceRoll(playerIndex);
-    setTimeout(() => {
-      const result = Math.floor(Math.random() * 20) + 1;
-      setDiceResults(prev => ({
-        ...prev,
-        [playerIndex]: result
-      }));
-    }, 800);
-  };
-
-  const renderDiceSetup = () => (
-    <View style={styles.setupContainer}>
-      <ImageBackground
-        source={require('../assets/images/background_img.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <LinearGradient
-          colors={['rgba(26, 42, 108, 0.7)', 'rgba(45, 45, 77, 0.8)', 'rgba(15, 15, 31, 0.9)']}
-          style={styles.gradient}
+    return (
+      <View style={styles.diceInterfaceContainer}>
+        <ImageBackground
+          source={require('../assets/images/background_img.png')}
+          style={styles.backgroundImage}
+          resizeMode="cover"
         >
-          <View style={styles.setupContent}>
-            <Text style={styles.setupTitle}>Dice Roll</Text>
-            <View style={styles.setupForm}>
-              <Text style={styles.setupLabel}>Number of Players:</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={playerCount}
-                  onValueChange={(value) => setPlayerCount(value)}
-                  style={styles.picker}
-                  itemStyle={styles.pickerItem}
-                >
-                  {[2, 3, 4, 5, 6, 7, 8].map((num) => (
-                    <Picker.Item
-                      key={num}
-                      label={num.toString()}
-                      value={num}
-                      color="#fff"
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.startButton} onPress={() => startDiceGame(playerCount)}>
-              <Text style={styles.startButtonText}>Start Dice Roll</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-      </ImageBackground>
-    </View>
-  );
-
-  const renderDiceResults = () => (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#1a2a6c', '#2d2d4d', '#0f0f1f']}
-        style={styles.gradient}
-      >
-        <View style={[styles.playersContainer, landscapeStyles.container]}>
-          {Array(playerCount).fill(null).map((_, index) => {
-            const isWideBox = playerCount === 3 && index === 2;
-            const isTallBox = playerCount <= 2;
-
-            return (
-              <View 
-                key={index} 
-                style={[
-                  styles.playerBox,
-                  landscapeStyles.playerBox,
-                  isWideBox && landscapeStyles.playerBoxWide,
-                  isTallBox && landscapeStyles.playerBoxTall,
-                  (index === 1 || index === 3) && landscapeStyles.playerBoxReversed,
-                  (index === 0 || index === 1) && landscapeStyles.playerBoxFlipped,
-                  modeSliders[index] && { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
-                ]}
-              >
-                <View style={[styles.playerContent, landscapeStyles.playerContent]}>
-                  <View style={landscapeStyles.playerHeader}>
-                    <TouchableOpacity
-                      style={landscapeStyles.playerNameContainer}
-                      onPress={() => setEditingPlayer(index)}
-                    >
-                      <Text style={landscapeStyles.playerTitle}>
-                        {playerStats[index].info.nickname || `Player ${index + 1}`}
-                      </Text>
-                      {renderPlayerColors(playerStats[index].info.colors)}
-                    </TouchableOpacity>
-                    <View style={landscapeStyles.headerControls}>
-                      <TouchableOpacity
-                        style={landscapeStyles.modeSwitch}
-                        onPress={() => toggleMode(index)}
-                      >
-                        <View style={landscapeStyles.modeSwitchTrack}>
-                          <View style={[
-                            landscapeStyles.modeSwitchThumb,
-                            { marginLeft: modeSliders[index] ? 'auto' : 0 }
-                          ]} />
-                        </View>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          landscapeStyles.combinedModeButton,
-                          combinedMode[index] && landscapeStyles.combinedModeButtonActive
-                        ]}
-                        onPress={() => toggleCombinedMode(index)}
-                      >
-                        <Text style={landscapeStyles.combinedModeButtonText}>Duel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={landscapeStyles.diceButton}
-                        onPress={() => {
-                          setCurrentRollingPlayer(index);
-                          setShowDiceModal(true);
-                        }}
-                      >
-                        <Text style={landscapeStyles.diceButtonText}>🎲</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={landscapeStyles.healthControls}>
-                    <TouchableOpacity
-                      style={landscapeStyles.healthButton}
-                      onPress={() => adjustHealth(index, -1, modeSliders[index])}
-                    >
-                      <Text style={landscapeStyles.healthButtonText}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={landscapeStyles.healthValue}>
-                      {modeSliders[index] ? commanderLifeTotals[index] : regularLifeTotals[index]}
-                    </Text>
-                    <TouchableOpacity
-                      style={landscapeStyles.healthButton}
-                      onPress={() => adjustHealth(index, 1, modeSliders[index])}
-                    >
-                      <Text style={landscapeStyles.healthButtonText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={landscapeStyles.damageSection}>
-                    <Text style={landscapeStyles.damageSectionTitle}>Damage From:</Text>
-                    <View style={landscapeStyles.damageButtonsContainer}>
-                      {Array(playerCount).fill(null).map((_, sourceIndex) => (
-                        sourceIndex !== index && (
-                          <View key={sourceIndex} style={landscapeStyles.damageButtonWrapper}>
-                            <TouchableOpacity
-                              style={landscapeStyles.damageAdjustButton}
-                              onPress={() => adjustDamage(index, sourceIndex, -1, modeSliders[index])}
-                            >
-                              <Text style={landscapeStyles.damageAdjustButtonText}>-</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={landscapeStyles.damageButton}
-                              onPress={() => handleDamageClick(index, sourceIndex, modeSliders[index])}
-                            >
-                              <Text style={landscapeStyles.damageButtonText}>
-                                {playerStats[sourceIndex].info.nickname || `P${sourceIndex + 1}`}
-                              </Text>
-                              <Text style={[
-                                landscapeStyles.damageAmount,
-                                { color: modeSliders[index] ? '#ff6b6b' : '#fff' }
-                              ]}>
-                                {modeSliders[index] 
-                                  ? playerStats[index]?.commanderDamageTaken[sourceIndex] || 0
-                                  : playerStats[index]?.regularDamageTaken[sourceIndex] || 0}
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={landscapeStyles.damageAdjustButton}
-                              onPress={() => adjustDamage(index, sourceIndex, 1, modeSliders[index])}
-                            >
-                              <Text style={landscapeStyles.damageAdjustButtonText}>+</Text>
-                            </TouchableOpacity>
-                          </View>
-                        )
-                      ))}
-                    </View>
-                  </View>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-        <View style={[styles.endGameButtonContainer, styles.endGameButtonContainerLandscape]}>
-          <TouchableOpacity
-            style={styles.endGameButton}
-            onPress={endGame}
+          <LinearGradient
+            colors={['rgba(26, 42, 108, 0.7)', 'rgba(45, 45, 77, 0.8)', 'rgba(15, 15, 31, 0.9)']}
+            style={styles.gradient}
           >
-            <Text style={styles.endGameButtonText}>End Game</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    </View>
-  );
+            <ScrollView 
+              contentContainerStyle={styles.diceInterfaceScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.diceInterfaceContent}>
+                <Text style={styles.diceInterfaceTitle}>
+                  {currentRollingPlayer !== null ? 
+                    `${playerStats[currentRollingPlayer].info.nickname || `Player ${currentRollingPlayer + 1}`}'s Roll` 
+                    : 'Roll Dice'}
+                </Text>
+                <View style={styles.dicePickerContainer}>
+                  <Picker
+                    selectedValue={selectedDiceSides}
+                    onValueChange={(value) => {
+                      setSelectedDiceSides(value);
+                      rollDice(value);
+                    }}
+                    style={styles.dicePicker}
+                    itemStyle={styles.dicePickerItem}
+                  >
+                    {[4, 6, 8, 10, 12, 20, 100].map((sides) => (
+                      <Picker.Item
+                        key={sides}
+                        label={`d${sides}`}
+                        value={sides}
+                        color="#fff"
+                      />
+                    ))}
+                  </Picker>
+                </View>
+                {diceResult !== null && (
+                  <View style={styles.diceResultContainer}>
+                    <Text style={styles.diceResultText}>{diceResult}</Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={() => {
+                    setShowDiceInterface(false);
+                    setDiceResult(null);
+                  }}
+                >
+                  <Text style={styles.backButtonText}>← Back to Game</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </LinearGradient>
+        </ImageBackground>
+      </View>
+    );
+  };
 
   const toggleMode = (index: number) => {
     const newModes = [...modeSliders];
@@ -919,12 +720,8 @@ export default function App() {
     );
   }
 
-  if (showDiceSetup) {
-    return renderDiceSetup();
-  }
-
-  if (showDiceResults) {
-    return renderDiceResults();
+  if (showDiceInterface) {
+    return renderDiceInterface();
   }
 
   if (!gameStarted) {
@@ -1148,7 +945,6 @@ export default function App() {
               <Text style={styles.newGameButtonText}>New Game</Text>
             </TouchableOpacity>
           </View>
-          {renderDiceModal()}
         </LinearGradient>
       </View>
     );
@@ -1233,12 +1029,13 @@ export default function App() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={landscapeStyles.diceButton}
-                        onPress={() => {
-                          setCurrentRollingPlayer(index);
-                          setShowDiceModal(true);
-                        }}
+                        onPress={() => handleDicePress(index)}
+                        disabled={!isLandscape}
                       >
-                        <Text style={landscapeStyles.diceButtonText}>🎲</Text>
+                        <Text style={[
+                          landscapeStyles.diceButtonText,
+                          !isLandscape && { opacity: 0.5 }
+                        ]}>🎲</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1313,6 +1110,7 @@ export default function App() {
             <Text style={styles.endGameButtonText}>End Game</Text>
           </TouchableOpacity>
         </View>
+        {renderDiceInterface()}
       </LinearGradient>
     </View>
   );
@@ -1736,81 +1534,88 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
-  diceModalOverlay: {
+  diceInterfaceContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2000,
+  },
+  diceInterfaceScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  diceInterfaceContent: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
-  },
-  diceModalContent: {
-    backgroundColor: 'rgba(26, 42, 108, 0.95)',
     padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    width: '80%',
-    maxWidth: 400,
-    zIndex: 1001,
+    minHeight: '100%',
   },
-  diceModalTitle: {
-    fontSize: 24,
+  diceInterfaceTitle: {
+    fontSize: 28,
     color: '#fff',
-    marginBottom: 20,
     fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    textAlign: 'center',
+    marginBottom: 20,
+    marginTop: 40,
   },
-  diceOptionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
+  dicePickerContainer: {
+    width: '100%',
+    maxWidth: 200,
+    height: 150,
+    backgroundColor: 'transparent',
     marginBottom: 20,
   },
-  diceOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+  dicePicker: {
+    width: '100%',
+    height: '100%',
+  },
+  dicePickerItem: {
+    color: '#fff',
+    fontSize: 32,
+    textAlign: 'center',
+  },
+  diceResultContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+    padding: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
+    borderRadius: 15,
+    width: '100%',
+    maxWidth: 200,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  diceOptionSelected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderColor: '#fff',
-  },
-  diceOptionText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  rollButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    marginBottom: 20,
-  },
-  rollButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   diceResultText: {
     fontSize: 72,
     color: '#fff',
     fontWeight: 'bold',
-    marginVertical: 20,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 3,
   },
-  portraitMessage: {
-    fontSize: 24,
+  backButton: {
+    marginTop: 20,
+    marginBottom: 40,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    width: '100%',
+    maxWidth: 200,
+    alignItems: 'center',
+  },
+  backButtonText: {
     color: '#fff',
-    textAlign: 'center',
-    marginTop: '20%',
-    fontWeight: 'bold',
-    paddingHorizontal: 20,
-  },
-  playerContent: {
-    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
   },
   editPlayerContainer: {
     padding: 20,
@@ -1918,6 +1723,14 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  portraitMessage: {
+    fontSize: 24,
+    color: '#fff',
+    textAlign: 'center',
+    marginTop: '20%',
+    fontWeight: 'bold',
+    paddingHorizontal: 20,
   },
 });
 
