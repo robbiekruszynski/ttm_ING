@@ -740,8 +740,8 @@ export default function App() {
   };
 
   const startGame = () => {
-    setLifeTotals(Array(playerCount).fill(40));
-    setCommanderTotals(Array(playerCount).fill(21));
+    setRegularLifeTotals(Array(playerCount).fill(40));
+    setCommanderLifeTotals(Array(playerCount).fill(21));
     setPlayerStats(initializePlayerStats(playerCount));
     setGameStarted(true);
   };
