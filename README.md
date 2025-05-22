@@ -1,5 +1,7 @@
 
-Get started
+# MTG LIFE COUNTER (commander) 
+
+### Get started
 
 1. Install dependencies
 
@@ -12,4 +14,4 @@ Get started
    ```bash
    npx expo start
    ```
-
+   
