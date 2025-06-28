@@ -184,14 +184,6 @@ const landscapeStyles = StyleSheet.create({
     marginTop: -4,
     width: '100%',
   },
-  damageSectionTitle: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    textAlign: 'center',
-    opacity: 0.7,
-  },
   damageButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -812,8 +804,6 @@ export default function App() {
 
   const [gameStarted, setGameStarted] = useState(false);
   const [playerCount, setPlayerCount] = useState(4);
-  const [lifeTotals, setLifeTotals] = useState<number[]>([]);
-  const [commanderTotals, setCommanderTotals] = useState<number[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'regular' | 'commander'>('regular');
@@ -825,6 +815,7 @@ export default function App() {
   const [regularLifeTotals, setRegularLifeTotals] = useState<number[]>(Array(4).fill(40));
   const [commanderLifeTotals, setCommanderLifeTotals] = useState<number[]>(Array(4).fill(21));
   const [combinedMode, setCombinedMode] = useState<boolean[]>(Array(4).fill(false));
+  const [activeDamageSource, setActiveDamageSource] = useState<number[]>(Array(4).fill(-1));
 
   const initializePlayerStats = (count: number) => {
     return Array(count).fill(null).map(() => ({
@@ -923,9 +914,56 @@ export default function App() {
   };
 
   const adjustLife = (index: number, delta: number, isCommander = false) => {
-    const updated = isCommander ? [...commanderTotals] : [...lifeTotals];
-    updated[index] += delta;
-    isCommander ? setCommanderTotals(updated) : setLifeTotals(updated);
+    const duelMode = combinedMode[index];
+    const updatedRegular = [...regularLifeTotals];
+    const updatedCommander = [...commanderLifeTotals];
+    let updateRegular = false;
+    let updateCommander = false;
+
+    if (duelMode) {
+      updatedRegular[index] += delta;
+      updatedCommander[index] += delta;
+      updateRegular = true;
+      updateCommander = true;
+    } else if (isCommander) {
+      updatedCommander[index] += delta;
+      updateCommander = true;
+    } else {
+      updatedRegular[index] += delta;
+      updateRegular = true;
+    }
+
+    if (updateRegular) setRegularLifeTotals(updatedRegular);
+    if (updateCommander) setCommanderLifeTotals(updatedCommander);
+
+    // If there's an active damage source, track the damage
+    if (activeDamageSource[index] !== -1 && delta < 0) {
+      const damageAmount = Math.abs(delta);
+      const newPlayerStats = [...playerStats];
+      const sourceIndex = activeDamageSource[index];
+      if (duelMode) {
+        // Track both regular and commander damage
+        newPlayerStats[index].regularDamageTaken[sourceIndex] = 
+          (newPlayerStats[index].regularDamageTaken[sourceIndex] || 0) + damageAmount;
+        newPlayerStats[sourceIndex].regularDamageDealt[index] = 
+          (newPlayerStats[sourceIndex].regularDamageDealt[index] || 0) + damageAmount;
+        newPlayerStats[index].commanderDamageTaken[sourceIndex] = 
+          (newPlayerStats[index].commanderDamageTaken[sourceIndex] || 0) + damageAmount;
+        newPlayerStats[sourceIndex].commanderDamageDealt[index] = 
+          (newPlayerStats[sourceIndex].commanderDamageDealt[index] || 0) + damageAmount;
+      } else if (isCommander) {
+        newPlayerStats[index].commanderDamageTaken[sourceIndex] = 
+          (newPlayerStats[index].commanderDamageTaken[sourceIndex] || 0) + damageAmount;
+        newPlayerStats[sourceIndex].commanderDamageDealt[index] = 
+          (newPlayerStats[sourceIndex].commanderDamageDealt[index] || 0) + damageAmount;
+      } else {
+        newPlayerStats[index].regularDamageTaken[sourceIndex] = 
+          (newPlayerStats[index].regularDamageTaken[sourceIndex] || 0) + damageAmount;
+        newPlayerStats[sourceIndex].regularDamageDealt[index] = 
+          (newPlayerStats[sourceIndex].regularDamageDealt[index] || 0) + damageAmount;
+      }
+      setPlayerStats(newPlayerStats);
+    }
   };
 
   const adjustDamage = (currentPlayerIndex: number, sourceIndex: number, amount: number, isCommander: boolean) => {
@@ -1140,6 +1178,12 @@ export default function App() {
         setRegularLifeTotals(newTotals);
       }
     }
+  };
+
+  const handleDamageSourceToggle = (index: number, sourceIndex: number) => {
+    const newActiveDamageSource = [...activeDamageSource];
+    newActiveDamageSource[index] = newActiveDamageSource[index] === sourceIndex ? -1 : sourceIndex;
+    setActiveDamageSource(newActiveDamageSource);
   };
 
   if (editingPlayer !== null) {
@@ -1562,7 +1606,7 @@ export default function App() {
                   <View style={landscapeStyles.healthControls}>
                     <TouchableOpacity
                       style={landscapeStyles.healthButton}
-                      onPress={() => adjustHealth(index, -1, modeSliders[index])}
+                      onPress={() => adjustLife(index, -1, modeSliders[index])}
                     >
                       <Text style={landscapeStyles.healthButtonText}>-</Text>
                     </TouchableOpacity>
@@ -1584,47 +1628,36 @@ export default function App() {
                     </View>
                     <TouchableOpacity
                       style={landscapeStyles.healthButton}
-                      onPress={() => adjustHealth(index, 1, modeSliders[index])}
+                      onPress={() => adjustLife(index, 1, modeSliders[index])}
                     >
                       <Text style={landscapeStyles.healthButtonText}>+</Text>
                     </TouchableOpacity>
                   </View>
 
                   <View style={landscapeStyles.damageSection}>
-                    <Text style={landscapeStyles.damageSectionTitle}>Damage From:</Text>
                     <View style={landscapeStyles.damageButtonsContainer}>
                       {Array(playerCount).fill(null).map((_, sourceIndex) => (
                         sourceIndex !== index && (
-                          <View key={sourceIndex} style={landscapeStyles.damageButtonWrapper}>
-                            <TouchableOpacity
-                              style={landscapeStyles.damageAdjustButton}
-                              onPress={() => adjustDamage(index, sourceIndex, -1, modeSliders[index])}
-                            >
-                              <Text style={landscapeStyles.damageAdjustButtonText}>-</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={landscapeStyles.damageButton}
-                              onPress={() => handleDamageClick(index, sourceIndex, modeSliders[index])}
-                            >
-                              <Text style={landscapeStyles.damageButtonText}>
-                                {playerStats[sourceIndex].info.nickname || `P${sourceIndex + 1}`}
-                              </Text>
-                              <Text style={[
-                                landscapeStyles.damageAmount,
-                                { color: modeSliders[index] ? 'rgba(255, 0, 0, 0.8)' : '#fff' }
-                              ]}>
-                                {modeSliders[index] 
-                                  ? playerStats[index]?.commanderDamageTaken[sourceIndex] || 0
-                                  : playerStats[index]?.regularDamageTaken[sourceIndex] || 0}
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={landscapeStyles.damageAdjustButton}
-                              onPress={() => adjustDamage(index, sourceIndex, 1, modeSliders[index])}
-                            >
-                              <Text style={landscapeStyles.damageAdjustButtonText}>+</Text>
-                            </TouchableOpacity>
-                          </View>
+                          <TouchableOpacity
+                            key={sourceIndex}
+                            style={[
+                              landscapeStyles.damageButton,
+                              activeDamageSource[index] === sourceIndex && { backgroundColor: 'rgba(255, 0, 0, 0.3)' }
+                            ]}
+                            onPress={() => handleDamageSourceToggle(index, sourceIndex)}
+                          >
+                            <Text style={landscapeStyles.damageButtonText}>
+                              {playerStats[sourceIndex].info.nickname || `P${sourceIndex + 1}`}
+                            </Text>
+                            <Text style={[
+                              landscapeStyles.damageAmount,
+                              { color: modeSliders[index] ? 'rgba(255, 0, 0, 0.8)' : '#fff' }
+                            ]}>
+                              {modeSliders[index] 
+                                ? playerStats[index]?.commanderDamageTaken[sourceIndex] || 0
+                                : playerStats[index]?.regularDamageTaken[sourceIndex] || 0}
+                            </Text>
+                          </TouchableOpacity>
                         )
                       ))}
                     </View>
@@ -1728,17 +1761,6 @@ const styles = StyleSheet.create({
     padding: 10,
     width: '100%',
   },
-  playersContainerLandscape: {
-    paddingHorizontal: 5,
-  },
-  playersGrid: {
-    flexDirection: 'column',
-  },
-  playersGridLandscape: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
   playerBox: {
     width: '49.5%',
     height: '49%',
@@ -1753,430 +1775,70 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  playerBoxLandscape: {
-    width: '48%',
-    marginHorizontal: '1%',
-  },
-  playerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-    paddingHorizontal: 4,
-    width: '100%',
-  },
-  playerNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  playerContent: {
     flex: 1,
+    flexDirection: 'column',
   },
-  playerTitle: {
-    fontSize: 14,
+  portraitMessage: {
+    fontSize: 24,
     color: '#fff',
-    fontWeight: 'bold',
-  },
-  headerControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modeSwitch: {
-    width: 35,
-    height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 10,
-    padding: 2,
-    marginTop: 0,
-    alignSelf: 'center',
-    marginRight: 8,
-  },
-  combinedModeButton: {
-    width: 30,
-    height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 10,
-    padding: 2,
-    marginTop: 0,
-    alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    marginRight: 8,
-  },
-  combinedModeButtonActive: {
-    backgroundColor: 'rgba(255, 0, 0, 0.2)',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  combinedModeButtonText: {
-    color: '#fff',
-    fontSize: 8,
     textAlign: 'center',
-    opacity: 0.7,
+    marginTop: '20%',
+    fontWeight: 'bold',
+    paddingHorizontal: 20,
   },
-  diceButton: {
-    width: 30,
+  endGameButton: {
+    position: 'absolute',
+    top: '50%',
+    right: 20,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 15,
+    width: 50,
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    transform: [{ translateY: -15 }],
   },
-  diceButtonText: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.7,
-  },
-  healthControls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 0,
-    marginTop: 2,
-    gap: 5,
-  },
-  damageSection: {
-    marginTop: 0,
-    width: '100%',
-  },
-  damageSectionTitle: {
+  endGameButtonText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 2,
-    textAlign: 'center',
-    opacity: 0.7,
   },
-  damageButtonsContainer: {
+  colorSelector: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 0,
-    paddingHorizontal: 2,
-  },
-  damageButtonWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  damageButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 6,
-    padding: 4,
-    minWidth: 60,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  damageButtonText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    opacity: 0.7,
-  },
-  damageAmount: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginTop: 0,
-    opacity: 0.7,
-  },
-  damageAdjustButton: {
-    width: 14,
-    height: 14,
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  damageAdjustButtonText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-    opacity: 0.7,
-    lineHeight: 12,
-  },
-  statsContainer: {
-    flex: 1,
-  },
-  statsContentContainer: {
-    padding: 20,
-    paddingBottom: 100, // Extra padding for the new game button
-  },
-  statsTitle: {
-    fontSize: 28,
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontWeight: 'bold',
-  },
-  statsToggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 20,
     gap: 10,
+    marginBottom: 20,
   },
-  statsToggleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  colorButton: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  statsToggleActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  colorButtonSelected: {
     borderColor: '#fff',
+    borderWidth: 3,
   },
-  statsToggleText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  chartContainer: {
-    marginBottom: 20,
-    padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-  },
-  chartTitle: {
-    color: '#fff',
-    fontSize: 18,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  playerTabsScroll: {
-    maxHeight: 50,
-    marginBottom: 20,
-  },
-  playerTab: {
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  playerTabActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderColor: '#fff',
-  },
-  playerTabText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  playerStatsScroll: {
-    flex: 1,
-  },
-  playerStatsHeader: {
+  playerColorIndicators: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-  },
-  playerStatsName: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  playerStatsColors: {
-    flexDirection: 'row',
+    marginLeft: 10,
     gap: 4,
   },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-  },
-  statLabel: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  statValue: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  damageBreakdown: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-  },
-  breakdownTitle: {
-    color: '#fff',
-    fontSize: 18,
-    marginBottom: 10,
-  },
-  breakdownRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  breakdownText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  breakdownValue: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  newGameButtonContainer: {
-    padding: 20,
-    backgroundColor: 'rgba(33, 37, 58, 0.95)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  newGameButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 15,
-    borderRadius: 8,
+  colorIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  newGameButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    marginVertical: 15,
-  },
-  actionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  qrCodeContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -100 }, { translateY: -100 }],
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  closeButton: {
-    marginTop: 15,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    backgroundColor: '#1a2a6c',
-    borderRadius: 5,
-  },
-  closeButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  diceInterfaceContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 2000,
-  },
-  diceInterfaceScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  diceInterfaceContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    minHeight: '100%',
-  },
-  diceInterfaceTitle: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    textAlign: 'center',
-    marginBottom: 20,
-    marginTop: 40,
-  },
-  dicePickerContainer: {
-    width: '100%',
-    maxWidth: 200,
-    height: 150,
-    backgroundColor: 'transparent',
-    marginBottom: 20,
-  },
-  dicePicker: {
-    width: '100%',
-    height: '100%',
-  },
-  dicePickerItem: {
-    color: '#fff',
-    fontSize: 32,
-    textAlign: 'center',
-  },
-  diceResultContainer: {
-    alignItems: 'center',
-    marginVertical: 20,
-    padding: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 15,
-    width: '100%',
-    maxWidth: 200,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  diceResultText: {
-    fontSize: 72,
-    color: '#fff',
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 3,
-  },
-  backButton: {
-    marginTop: 20,
-    marginBottom: 40,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    width: '100%',
-    maxWidth: 200,
-    alignItems: 'center',
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
   },
   editPlayerContainer: {
     padding: 20,
@@ -2204,24 +1866,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 10,
   },
-  colorSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 20,
-  },
-  colorButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  colorButtonSelected: {
-    borderColor: '#fff',
-    borderWidth: 3,
-  },
   saveButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingVertical: 12,
@@ -2233,126 +1877,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
-  },
-  playerColorIndicators: {
-    flexDirection: 'row',
-    marginLeft: 10,
-    gap: 4,
-  },
-  colorIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  endGameButtonContainer: {
-    width: '100%',
-    padding: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  endGameButtonContainerLandscape: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -30 }, { translateY: -10 }],
-    backgroundColor: 'transparent',
-    zIndex: 1000,
-    pointerEvents: 'box-none',
-  },
-  endGameButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    margin: 0,
-    width: 60,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    pointerEvents: 'auto',
-  },
-  endGameButtonText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  portraitMessage: {
-    fontSize: 24,
-    color: '#fff',
-    textAlign: 'center',
-    marginTop: '20%',
-    fontWeight: 'bold',
-    paddingHorizontal: 20,
-  },
-  resultsContent: {
-    marginBottom: 20,
-  },
-  lifeTotalsContainer: {
-    width: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    position: 'absolute',
-    zIndex: 10,
-  },
-  commanderLifeValue: {
-    fontSize: 48,
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
-    width: '100%',
-  },
-  endGameMenuButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 1000,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  endGameMenuButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  endGameButton: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    zIndex: 1000,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 15,
-    width: 50,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  endGameButtonText: {
-    color: '#fff',
-    fontSize: 12,
     fontWeight: 'bold',
   },
 });
