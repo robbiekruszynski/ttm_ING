@@ -1475,8 +1475,8 @@ export default function App() {
                   isWideBox && landscapeStyles.playerBoxWide,
                   isTallBox && landscapeStyles.playerBoxTall,
                   isTwoPlayerBox && landscapeStyles.playerBoxTwoPlayer,
-                  // 2-player layout: Player 1 normal, Player 2 flipped 180 degrees
-                  (playerCount === 2 && index === 1) && landscapeStyles.playerBoxFlipped,
+                  // 2-player layout: Player 1 flipped 180 degrees, Player 2 normal
+                  (playerCount === 2 && index === 0) && landscapeStyles.playerBoxFlipped,
                   // 3-player layout: Players 1 and 2 flipped
                   (playerCount === 3 && (index === 0 || index === 1)) && landscapeStyles.playerBoxFlipped,
                   // 4-player layout: Players 2 and 4 reversed, Players 1 and 2 flipped
