@@ -1509,7 +1509,7 @@ export default function App() {
                   </View>
 
                   <View style={landscapeStyles.damageSection}>
-                    <Text style={landscapeStyles.damageSectionTitle}>Damage From:</Text>
+                    {/* <Text style={landscapeStyles.damageSectionTitle}>Damage From:</Text> */}
                     <View style={landscapeStyles.damageButtonsContainer}>
                       {Array(playerCount).fill(null).map((_, sourceIndex) => (
                         sourceIndex !== index && (
