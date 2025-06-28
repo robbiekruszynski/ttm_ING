@@ -50,10 +50,12 @@ const landscapeStyles = StyleSheet.create({
   containerTwoPlayer: {
     flexDirection: 'column',
     justifyContent: 'space-around',
-    paddingHorizontal: 1,
-    paddingTop: 1,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
     height: '100%',
     width: '100%',
+    gap: 0,
   },
   playerBox: {
     width: '49.5%',
@@ -76,8 +78,9 @@ const landscapeStyles = StyleSheet.create({
     height: '98%',
   },
   playerBoxTwoPlayer: {
-    width: '99%',
-    height: '48%',
+    width: '100%',
+    height: '49%',
+    marginVertical: 0,
   },
   playerBoxReversed: {
     flexDirection: 'row-reverse',
@@ -757,6 +760,50 @@ const landscapeStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  endGameMenuButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  endGameMenuButtonText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  endGameButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 15,
+    width: 50,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  endGameButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
 });
 
 export default function App() {
@@ -1373,12 +1420,6 @@ export default function App() {
             </View>
           </ScrollView>
         </LinearGradient>
-        <TouchableOpacity
-          style={styles.endGameFab}
-          onPress={endGame}
-        >
-          <Text style={styles.endGameFabText}>End</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -1593,6 +1634,12 @@ export default function App() {
             );
           })}
         </View>
+        <TouchableOpacity
+          style={styles.endGameButton}
+          onPress={endGame}
+        >
+          <Text style={styles.endGameButtonText}>End</Text>
+        </TouchableOpacity>
       </LinearGradient>
     </View>
   );
@@ -2264,15 +2311,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     width: '100%',
   },
-  endGameFab: {
+  endGameMenuButton: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
+    top: 10,
+    right: 10,
     zIndex: 1000,
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 28,
-    width: 56,
-    height: 56,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -2281,15 +2328,33 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  endGameFabText: {
+  endGameMenuButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  endGameButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 15,
+    width: 50,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  endGameButtonText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: 'bold',
   },
 });
-
-
-
-
   
   
