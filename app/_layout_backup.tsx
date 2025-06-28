@@ -1,7 +1,7 @@
 import { Picker } from '@react-native-picker/picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Alert, ImageBackground, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ImageBackground, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -47,14 +47,6 @@ const landscapeStyles = StyleSheet.create({
     height: '100%',
     width: '100%',
   },
-  containerTwoPlayer: {
-    flexDirection: 'column',
-    justifyContent: 'space-around',
-    paddingHorizontal: 1,
-    paddingTop: 1,
-    height: '100%',
-    width: '100%',
-  },
   playerBox: {
     width: '49.5%',
     height: '49%',
@@ -74,10 +66,6 @@ const landscapeStyles = StyleSheet.create({
   },
   playerBoxTall: {
     height: '98%',
-  },
-  playerBoxTwoPlayer: {
-    width: '99%',
-    height: '48%',
   },
   playerBoxReversed: {
     flexDirection: 'row-reverse',
@@ -139,17 +127,6 @@ const landscapeStyles = StyleSheet.create({
     marginHorizontal: 5,
     marginTop: -12,
     marginBottom: -4,
-  },
-  lifeTotalsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commanderLifeValue: {
-    color: 'rgba(255, 0, 0, 0.8)',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: -8,
   },
   modeSwitch: {
     width: 35,
@@ -781,21 +758,7 @@ export default function App() {
   };
 
   const endGame = () => {
-    Alert.alert(
-      "End Game",
-      "Are you sure you want to end the current game?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "End Game",
-          style: "destructive",
-          onPress: () => setShowResults(true)
-        }
-      ]
-    );
+    setShowResults(true);
   };
 
   const updatePlayerInfo = (index: number, nickname: string, colors: PlayerColors) => {
@@ -1457,14 +1420,10 @@ export default function App() {
         colors={['rgba(33, 37, 58, 0.95)', 'rgba(43, 47, 68, 0.9)', 'rgba(53, 57, 78, 0.85)']}
         style={styles.gradient}
       >
-        <View style={[
-          styles.playersContainer, 
-          playerCount === 2 ? landscapeStyles.containerTwoPlayer : landscapeStyles.container
-        ]}>
+        <View style={[styles.playersContainer, landscapeStyles.container]}>
           {Array(playerCount).fill(null).map((_, index) => {
             const isWideBox = playerCount === 3 && index === 2;
             const isTallBox = playerCount <= 2;
-            const isTwoPlayerBox = playerCount === 2;
 
             return (
               <View 
@@ -1474,12 +1433,8 @@ export default function App() {
                   landscapeStyles.playerBox,
                   isWideBox && landscapeStyles.playerBoxWide,
                   isTallBox && landscapeStyles.playerBoxTall,
-                  isTwoPlayerBox && landscapeStyles.playerBoxTwoPlayer,
-                  // 2-player layout: Player 1 normal, Player 2 flipped 180 degrees
                   (playerCount === 2 && index === 1) && landscapeStyles.playerBoxFlipped,
-                  // 3-player layout: Players 1 and 2 flipped
                   (playerCount === 3 && (index === 0 || index === 1)) && landscapeStyles.playerBoxFlipped,
-                  // 4-player layout: Players 2 and 4 reversed, Players 1 and 2 flipped
                   (playerCount === 4 && (index === 1 || index === 3)) && landscapeStyles.playerBoxReversed,
                   (playerCount === 4 && (index === 0 || index === 1)) && landscapeStyles.playerBoxFlipped,
                   modeSliders[index] && { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
@@ -1538,18 +1493,10 @@ export default function App() {
                       <Text style={landscapeStyles.healthButtonText}>-</Text>
                     </TouchableOpacity>
                     <View style={landscapeStyles.lifeTotalsContainer}>
-                      <Text style={[
-                        landscapeStyles.healthValue,
-                        !modeSliders[index] && { color: '#fff' },
-                        modeSliders[index] && { color: 'rgba(255, 255, 255, 0.5)' }
-                      ]}>
+                      <Text style={landscapeStyles.healthValue}>
                         {regularLifeTotals[index]}
                       </Text>
-                      <Text style={[
-                        landscapeStyles.commanderLifeValue,
-                        modeSliders[index] && { color: 'rgba(255, 0, 0, 0.8)' },
-                        !modeSliders[index] && { color: 'rgba(255, 0, 0, 0.5)' }
-                      ]}>
+                      <Text style={landscapeStyles.commanderLifeValue}>
                         {commanderLifeTotals[index]}
                       </Text>
                     </View>
