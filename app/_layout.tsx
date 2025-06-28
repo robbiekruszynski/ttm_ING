@@ -650,6 +650,15 @@ const landscapeStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    // flex: 1, // Remove this line for more precise alignment
+  },
+  playerNameFarLeft: {
+    alignSelf: 'flex-start',
+    marginLeft: 32, // More margin for edge
+  },
+  playerNameFarRight: {
+    alignSelf: 'flex-end',
+    marginRight: 32, // More margin for edge
   },
   playerTitle: {
     fontSize: 14,
@@ -726,6 +735,28 @@ const landscapeStyles = StyleSheet.create({
     textAlign: 'center',
     marginTop: -8,
   },
+  endGameFab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  endGameFabText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default function App() {
@@ -743,14 +774,10 @@ export default function App() {
   const [editingPlayer, setEditingPlayer] = useState<number | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [qrCodeVisible, setQrCodeVisible] = useState(false);
-  const [showDiceInterface, setShowDiceInterface] = useState(false);
-  const [diceResult, setDiceResult] = useState<number | null>(null);
-  const [currentRollingPlayer, setCurrentRollingPlayer] = useState<number | null>(null);
   const [modeSliders, setModeSliders] = useState<boolean[]>(Array(4).fill(false));
   const [regularLifeTotals, setRegularLifeTotals] = useState<number[]>(Array(4).fill(40));
   const [commanderLifeTotals, setCommanderLifeTotals] = useState<number[]>(Array(4).fill(21));
   const [combinedMode, setCombinedMode] = useState<boolean[]>(Array(4).fill(false));
-  const [selectedDiceSides, setSelectedDiceSides] = useState(20);
 
   const initializePlayerStats = (count: number) => {
     return Array(count).fill(null).map(() => ({
@@ -1041,82 +1068,6 @@ export default function App() {
     }
   };
 
-  const rollDice = (sides: number) => {
-    const result = Math.floor(Math.random() * sides) + 1;
-    setDiceResult(result);
-  };
-
-  const handleDicePress = (index: number) => {
-    setCurrentRollingPlayer(index);
-    setShowDiceInterface(true);
-  };
-
-  const renderDiceInterface = () => {
-    if (!showDiceInterface) return null;
-
-    return (
-      <View style={styles.diceInterfaceContainer}>
-        <ImageBackground
-          source={require('../assets/images/background_img.png')}
-          style={styles.backgroundImage}
-          resizeMode="cover"
-        >
-          <LinearGradient
-            colors={['rgba(23, 27, 48, 0.95)', 'rgba(33, 37, 58, 0.9)', 'rgba(43, 47, 68, 0.85)']}
-            style={styles.gradient}
-          >
-            <ScrollView 
-              contentContainerStyle={styles.diceInterfaceScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.diceInterfaceContent}>
-                <Text style={styles.diceInterfaceTitle}>
-                  {currentRollingPlayer !== null ? 
-                    `${playerStats[currentRollingPlayer].info.nickname || `Player ${currentRollingPlayer + 1}`}'s Roll` 
-                    : 'Roll Dice'}
-                </Text>
-                <View style={styles.dicePickerContainer}>
-                  <Picker
-                    selectedValue={selectedDiceSides}
-                    onValueChange={(value) => {
-                      setSelectedDiceSides(value);
-                      rollDice(value);
-                    }}
-                    style={styles.dicePicker}
-                    itemStyle={styles.dicePickerItem}
-                  >
-                    {[4, 6, 8, 10, 12, 20, 100].map((sides) => (
-                      <Picker.Item
-                        key={sides}
-                        label={`d${sides}`}
-                        value={sides}
-                        color="#fff"
-                      />
-                    ))}
-                  </Picker>
-                </View>
-                {diceResult !== null && (
-                  <View style={styles.diceResultContainer}>
-                    <Text style={styles.diceResultText}>{diceResult}</Text>
-                  </View>
-                )}
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={() => {
-                    setShowDiceInterface(false);
-                    setDiceResult(null);
-                  }}
-                >
-                  <Text style={styles.backButtonText}>← Back to Game</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </LinearGradient>
-        </ImageBackground>
-      </View>
-    );
-  };
-
   const toggleMode = (index: number) => {
     const newModes = [...modeSliders];
     newModes[index] = !newModes[index];
@@ -1182,10 +1133,6 @@ export default function App() {
         </ImageBackground>
       </View>
     );
-  }
-
-  if (showDiceInterface) {
-    return renderDiceInterface();
   }
 
   if (!gameStarted) {
@@ -1426,6 +1373,12 @@ export default function App() {
             </View>
           </ScrollView>
         </LinearGradient>
+        <TouchableOpacity
+          style={styles.endGameFab}
+          onPress={endGame}
+        >
+          <Text style={styles.endGameFabText}>End</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -1475,7 +1428,7 @@ export default function App() {
                   isWideBox && landscapeStyles.playerBoxWide,
                   isTallBox && landscapeStyles.playerBoxTall,
                   isTwoPlayerBox && landscapeStyles.playerBoxTwoPlayer,
-                  // 2-player layout: Player 1 flipped 180 degrees, Player 2 normal
+                  // 2-player layout: Player 1 mirrors Player 2 (no flip), Player 2 normal
                   (playerCount === 2 && index === 0) && landscapeStyles.playerBoxFlipped,
                   // 3-player layout: Players 1 and 2 flipped
                   (playerCount === 3 && (index === 0 || index === 1)) && landscapeStyles.playerBoxFlipped,
@@ -1487,47 +1440,82 @@ export default function App() {
               >
                 <View style={[styles.playerContent, landscapeStyles.playerContent]}>
                   <View style={landscapeStyles.playerHeader}>
-                    <TouchableOpacity
-                      style={landscapeStyles.playerNameContainer}
-                      onPress={() => setEditingPlayer(index)}
-                    >
-                      <Text style={landscapeStyles.playerTitle}>
-                        {playerStats[index].info.nickname || `Player ${index + 1}`}
-                      </Text>
-                      {renderPlayerColors(playerStats[index].info.colors)}
-                    </TouchableOpacity>
-                    <View style={landscapeStyles.headerControls}>
-                      <TouchableOpacity
-                        style={landscapeStyles.modeSwitch}
-                        onPress={() => toggleMode(index)}
-                      >
-                        <View style={landscapeStyles.modeSwitchTrack}>
-                          <View style={[
-                            landscapeStyles.modeSwitchThumb,
-                            { marginLeft: modeSliders[index] ? 'auto' : 0 }
-                          ]} />
+                    {index === 0 ? (
+                      <>
+                        <View style={landscapeStyles.headerControls}>
+                          <TouchableOpacity
+                            style={landscapeStyles.modeSwitch}
+                            onPress={() => toggleMode(index)}
+                          >
+                            <View style={landscapeStyles.modeSwitchTrack}>
+                              <View style={[
+                                landscapeStyles.modeSwitchThumb,
+                                { marginLeft: modeSliders[index] ? 'auto' : 0 }
+                              ]} />
+                            </View>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              landscapeStyles.combinedModeButton,
+                              combinedMode[index] && landscapeStyles.combinedModeButtonActive
+                            ]}
+                            onPress={() => toggleCombinedMode(index)}
+                          >
+                            <Text style={landscapeStyles.combinedModeButtonText}>Duel</Text>
+                          </TouchableOpacity>
                         </View>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          landscapeStyles.combinedModeButton,
-                          combinedMode[index] && landscapeStyles.combinedModeButtonActive
-                        ]}
-                        onPress={() => toggleCombinedMode(index)}
-                      >
-                        <Text style={landscapeStyles.combinedModeButtonText}>Duel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={landscapeStyles.diceButton}
-                        onPress={() => handleDicePress(index)}
-                        disabled={!isLandscape}
-                      >
-                        <Text style={[
-                          landscapeStyles.diceButtonText,
-                          !isLandscape && { opacity: 0.5 }
-                        ]}>🎲</Text>
-                      </TouchableOpacity>
-                    </View>
+                        <TouchableOpacity
+                          style={[
+                            landscapeStyles.playerNameContainer,
+                            landscapeStyles.playerNameFarLeft
+                          ]}
+                          onPress={() => setEditingPlayer(index)}
+                        >
+                          <Text style={landscapeStyles.playerTitle}>
+                            {playerStats[index].info.nickname || `Player ${index + 1}`}
+                          </Text>
+                          {renderPlayerColors(playerStats[index].info.colors)}
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={[
+                            landscapeStyles.playerNameContainer,
+                            index === 0 && landscapeStyles.playerNameFarLeft,
+                            index === 1 && landscapeStyles.playerNameFarRight,
+                          ]}
+                          onPress={() => setEditingPlayer(index)}
+                        >
+                          <Text style={landscapeStyles.playerTitle}>
+                            {playerStats[index].info.nickname || `Player ${index + 1}`}
+                          </Text>
+                          {renderPlayerColors(playerStats[index].info.colors)}
+                        </TouchableOpacity>
+                        <View style={landscapeStyles.headerControls}>
+                          <TouchableOpacity
+                            style={landscapeStyles.modeSwitch}
+                            onPress={() => toggleMode(index)}
+                          >
+                            <View style={landscapeStyles.modeSwitchTrack}>
+                              <View style={[
+                                landscapeStyles.modeSwitchThumb,
+                                { marginLeft: modeSliders[index] ? 'auto' : 0 }
+                              ]} />
+                            </View>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              landscapeStyles.combinedModeButton,
+                              combinedMode[index] && landscapeStyles.combinedModeButtonActive
+                            ]}
+                            onPress={() => toggleCombinedMode(index)}
+                          >
+                            <Text style={landscapeStyles.combinedModeButtonText}>Duel</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
                   </View>
 
                   <View style={landscapeStyles.healthControls}>
@@ -1605,15 +1593,6 @@ export default function App() {
             );
           })}
         </View>
-        <View style={[styles.endGameButtonContainer, styles.endGameButtonContainerLandscape]}>
-          <TouchableOpacity
-            style={styles.endGameButton}
-            onPress={endGame}
-          >
-            <Text style={styles.endGameButtonText}>End Game</Text>
-          </TouchableOpacity>
-        </View>
-        {renderDiceInterface()}
       </LinearGradient>
     </View>
   );
@@ -2284,6 +2263,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
     width: '100%',
+  },
+  endGameFab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  endGameFabText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
