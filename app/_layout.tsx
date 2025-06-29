@@ -922,6 +922,41 @@ const landscapeStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  // Landscape-specific setup styles
+  setupContentLandscape: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    padding: 5,
+    paddingTop: 5,
+    gap: 15,
+  },
+  setupTitleLandscape: {
+    fontSize: 28,
+    color: '#fff',
+    marginTop: 0,
+    fontWeight: 'bold',
+  },
+  setupLabelLandscape: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 5,
+  },
+  pickerContainerLandscape: {
+    width: '100%',
+    maxWidth: 200,
+    height: 80,
+    backgroundColor: 'transparent',
+  },
+  startButtonsContainerLandscape: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 20,
+    gap: 10,
+    marginTop: 5,
+  },
 });
 
 export default function App() {
@@ -1308,8 +1343,8 @@ export default function App() {
 
   const handleDamageSourceToggle = (index: number, sourceIndex: number) => {
     const newActiveDamageSource = [...activeDamageSource];
-    newActiveDamageSource[index] = newActiveDamageSource[index] === sourceIndex ? -1 : sourceIndex;
-    setActiveDamageSource(newActiveDamageSource);
+    newActiveSource[index] = newActiveSource[index] === sourceIndex ? -1 : sourceIndex;
+    setActiveDamageSource(newActiveSource);
   };
 
   if (editingPlayer !== null) {
@@ -1364,29 +1399,45 @@ export default function App() {
             colors={['rgba(23, 27, 48, 0.95)', 'rgba(33, 37, 58, 0.9)', 'rgba(43, 47, 68, 0.85)']}
             style={styles.gradient}
           >
-            <View style={styles.setupContent}>
-              <Text style={styles.setupTitle}>Tragic the Mattering</Text>
-              <View style={styles.setupForm}>
-                <Text style={styles.setupLabel}>Number of Athletes:</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={playerCount}
-                    onValueChange={(value) => setPlayerCount(value)}
-                    style={styles.picker}
-                    itemStyle={styles.pickerItem}
-                  >
-                    {[2, 3, 4, 5, 6, 7, 8].map((num) => (
-                      <Picker.Item
-                        key={num}
-                        label={num.toString()}
-                        value={num}
-                        color="#fff"
-                      />
-                    ))}
-                  </Picker>
-                </View>
+            <View style={[
+              styles.setupContent,
+              isLandscape && landscapeStyles.setupContentLandscape
+            ]}>
+              <Text style={[
+                styles.setupTitle,
+                isLandscape && landscapeStyles.setupTitleLandscape
+              ]}>Tragic the Mattering</Text>
+              
+              <Text style={[
+                styles.setupLabel,
+                isLandscape && landscapeStyles.setupLabelLandscape
+              ]}>Number of Athletes:</Text>
+              
+              <View style={[
+                styles.pickerContainer,
+                isLandscape && landscapeStyles.pickerContainerLandscape
+              ]}>
+                <Picker
+                  selectedValue={playerCount}
+                  onValueChange={(value) => setPlayerCount(value)}
+                  style={styles.picker}
+                  itemStyle={styles.pickerItem}
+                >
+                  {[2, 3, 4, 5, 6, 7, 8].map((num) => (
+                    <Picker.Item
+                      key={num}
+                      label={num.toString()}
+                      value={num}
+                      color="#fff"
+                    />
+                  ))}
+                </Picker>
               </View>
-              <View style={styles.startButtonsContainer}>
+              
+              <View style={[
+                styles.startButtonsContainer,
+                isLandscape && landscapeStyles.startButtonsContainerLandscape
+              ]}>
                 <TouchableOpacity style={styles.startButton} onPress={startGame}>
                   <Text style={styles.startButtonText}>Start Game</Text>
                 </TouchableOpacity>
@@ -1826,12 +1877,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingBottom: 40,
-  },
-  setupForm: {
-    flex: 1,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   setupTitle: {
     fontSize: 36,
