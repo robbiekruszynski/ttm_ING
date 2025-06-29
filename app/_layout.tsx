@@ -1343,8 +1343,8 @@ export default function App() {
 
   const handleDamageSourceToggle = (index: number, sourceIndex: number) => {
     const newActiveDamageSource = [...activeDamageSource];
-    newActiveSource[index] = newActiveSource[index] === sourceIndex ? -1 : sourceIndex;
-    setActiveDamageSource(newActiveSource);
+    newActiveDamageSource[index] = newActiveDamageSource[index] === sourceIndex ? -1 : sourceIndex;
+    setActiveDamageSource(newActiveDamageSource);
   };
 
   if (editingPlayer !== null) {
